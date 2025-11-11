@@ -3,75 +3,236 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Webhook - Eventos</title>
+    <title>Webhook Events - Developer Console</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs2015.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <style>
+        .sidebar-item {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .sidebar-item:hover {
+            background: rgba(139, 92, 246, 0.1);
+        }
+        .sidebar-item.active {
+            background: rgba(139, 92, 246, 0.2);
+            border-left: 3px solid #8b5cf6;
+        }
+        .code-block {
+            background: #1e1e1e;
+            border-radius: 8px;
+            position: relative;
+        }
+        .copy-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .code-block:hover .copy-btn {
+            opacity: 1;
+        }
+        pre code {
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        .method-badge {
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+    </style>
 </head>
-<body class="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 min-h-screen">
-    <!-- Header -->
-    <header class="bg-white/10 backdrop-blur-md border-b border-white/20">
-        <div class="container mx-auto px-6 py-4">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-4">
-                    <a href="/" class="text-white hover:text-purple-200">
-                        <i class="fas fa-arrow-left text-xl"></i>
-                    </a>
-                    <div>
-                        <h1 class="text-2xl font-bold text-white" id="webhookName">Carregando...</h1>
-                        <p class="text-white/70 text-sm" id="webhookDescription"></p>
-                    </div>
+<body class="bg-gray-900 text-gray-100 h-screen overflow-hidden">
+    <!-- Top Header -->
+    <header class="bg-gray-800 border-b border-gray-700 px-4 py-3">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <a href="/" class="text-gray-400 hover:text-white transition">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
+                <div>
+                    <h1 class="text-lg font-semibold text-white" id="webhookName">Loading...</h1>
+                    <p class="text-xs text-gray-400" id="webhookDescription"></p>
                 </div>
-                <div class="flex items-center space-x-4">
-                    <span id="webhookStatus" class="px-4 py-2 bg-white/20 rounded-lg text-white text-sm"></span>
-                    <button onclick="clearEvents()" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
-                        <i class="fas fa-trash mr-2"></i>Limpar Eventos
-                    </button>
-                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <span id="webhookStatus" class="px-3 py-1 bg-green-500/20 text-green-400 text-xs font-semibold rounded"></span>
+                <span class="text-gray-400 text-xs" id="eventCount">0 events</span>
+                <button onclick="clearEvents()" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-sm transition">
+                    <i class="fas fa-trash mr-1"></i>Clear All
+                </button>
             </div>
         </div>
     </header>
 
-    <div class="container mx-auto px-6 py-8">
-        <!-- Webhook URL Card -->
-        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
-            <h3 class="text-lg font-bold text-gray-800 mb-3">Webhook URL</h3>
-            <div class="flex items-center space-x-3 bg-gray-50 rounded-lg p-4">
-                <code class="flex-1 text-purple-600 font-mono" id="webhookUrl">-</code>
-                <button onclick="copyUrl()" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">
-                    <i class="fas fa-copy mr-2"></i>Copiar
-                </button>
+    <div class="flex h-[calc(100vh-57px)]">
+        <!-- Sidebar - Events List -->
+        <aside class="w-80 bg-gray-800 border-r border-gray-700 overflow-y-auto">
+            <!-- Webhook URL -->
+            <div class="p-4 bg-gray-900/50 border-b border-gray-700">
+                <label class="text-xs font-semibold text-gray-400 uppercase mb-2 block">Webhook Endpoint</label>
+                <div class="flex items-center space-x-2 bg-gray-900 rounded p-2">
+                    <code class="flex-1 text-xs text-purple-400 break-all" id="webhookUrl">-</code>
+                    <button onclick="copyUrl()" class="text-gray-400 hover:text-white transition">
+                        <i class="fas fa-copy text-sm"></i>
+                    </button>
+                </div>
             </div>
-        </div>
 
-        <!-- Stats -->
-        <div class="grid grid-cols-3 gap-6 mb-6">
-            <div class="bg-white rounded-xl shadow-lg p-6">
-                <p class="text-gray-500 text-sm">Total de Eventos</p>
-                <p class="text-3xl font-bold text-gray-800" id="totalEvents">0</p>
+            <!-- Events List -->
+            <div class="p-3">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-xs font-semibold text-gray-400 uppercase">Events</h3>
+                    <button onclick="loadEvents()" class="text-gray-400 hover:text-white text-xs">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+                <div id="eventsList" class="space-y-1">
+                    <!-- Events will be loaded here -->
+                </div>
             </div>
-            <div class="bg-white rounded-xl shadow-lg p-6">
-                <p class="text-gray-500 text-sm">Último Evento</p>
-                <p class="text-lg font-bold text-gray-800" id="lastEvent">-</p>
-            </div>
-            <div class="bg-white rounded-xl shadow-lg p-6">
-                <p class="text-gray-500 text-sm">Criado em</p>
-                <p class="text-lg font-bold text-gray-800" id="createdAt">-</p>
-            </div>
-        </div>
+        </aside>
 
-        <!-- Events List -->
-        <div class="bg-white rounded-xl shadow-lg p-6">
-            <h2 class="text-2xl font-bold text-gray-800 mb-6">Eventos Recebidos</h2>
-            <div id="eventsList" class="space-y-4">
-                <!-- Events will be loaded here -->
+        <!-- Main Content Area -->
+        <main class="flex-1 overflow-y-auto bg-gray-900" id="mainContent">
+            <!-- Empty State -->
+            <div id="emptyState" class="flex items-center justify-center h-full">
+                <div class="text-center">
+                    <i class="fas fa-mouse-pointer text-6xl text-gray-700 mb-4"></i>
+                    <p class="text-gray-500 text-lg">Select an event to view details</p>
+                    <p class="text-gray-600 text-sm mt-2">Events will appear in the sidebar</p>
+                </div>
             </div>
-        </div>
+
+            <!-- Event Details (Hidden by default) -->
+            <div id="eventDetails" class="hidden p-6 space-y-6">
+                <!-- Event Header -->
+                <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center space-x-3">
+                            <span id="eventMethod" class="method-badge bg-green-600 text-white">GET</span>
+                            <span id="eventTime" class="text-sm text-gray-400">-</span>
+                        </div>
+                        <button onclick="deleteCurrentEvent()" class="text-red-400 hover:text-red-300 text-sm">
+                            <i class="fas fa-trash mr-1"></i>Delete Event
+                        </button>
+                    </div>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-gray-500 w-20">Path:</span>
+                            <code class="text-purple-400" id="eventPath">-</code>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-gray-500 w-20">IP:</span>
+                            <code class="text-blue-400" id="eventIp">-</code>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-gray-500 w-20">ID:</span>
+                            <code class="text-gray-400" id="eventId">-</code>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Query Parameters -->
+                <div id="querySection">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-sm font-semibold text-gray-300 flex items-center">
+                            <i class="fas fa-question-circle text-yellow-500 mr-2"></i>
+                            Query Parameters
+                        </h3>
+                        <button onclick="copySection('queryParams')" class="text-gray-400 hover:text-white text-xs">
+                            <i class="fas fa-copy mr-1"></i>Copy
+                        </button>
+                    </div>
+                    <div class="code-block">
+                        <button class="copy-btn bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 rounded text-xs" onclick="copySection('queryParams')">
+                            <i class="fas fa-copy mr-1"></i>Copy
+                        </button>
+                        <pre><code id="queryParams" class="json">-</code></pre>
+                    </div>
+                </div>
+
+                <!-- Headers -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-sm font-semibold text-gray-300 flex items-center">
+                            <i class="fas fa-list text-blue-500 mr-2"></i>
+                            Headers
+                        </h3>
+                        <button onclick="copySection('headers')" class="text-gray-400 hover:text-white text-xs">
+                            <i class="fas fa-copy mr-1"></i>Copy
+                        </button>
+                    </div>
+                    <div class="code-block">
+                        <button class="copy-btn bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 rounded text-xs" onclick="copySection('headers')">
+                            <i class="fas fa-copy mr-1"></i>Copy
+                        </button>
+                        <pre><code id="headers" class="json">-</code></pre>
+                    </div>
+                </div>
+
+                <!-- Body -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-sm font-semibold text-gray-300 flex items-center">
+                            <i class="fas fa-file-code text-green-500 mr-2"></i>
+                            Request Body
+                        </h3>
+                        <button onclick="copySection('body')" class="text-gray-400 hover:text-white text-xs">
+                            <i class="fas fa-copy mr-1"></i>Copy
+                        </button>
+                    </div>
+                    <div class="code-block">
+                        <button class="copy-btn bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 rounded text-xs" onclick="copySection('body')">
+                            <i class="fas fa-copy mr-1"></i>Copy
+                        </button>
+                        <pre><code id="body" class="json">-</code></pre>
+                    </div>
+                </div>
+
+                <!-- Raw Body -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-sm font-semibold text-gray-300 flex items-center">
+                            <i class="fas fa-code text-purple-500 mr-2"></i>
+                            Raw Body
+                        </h3>
+                        <button onclick="copySection('rawBody')" class="text-gray-400 hover:text-white text-xs">
+                            <i class="fas fa-copy mr-1"></i>Copy
+                        </button>
+                    </div>
+                    <div class="code-block">
+                        <button class="copy-btn bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 rounded text-xs" onclick="copySection('rawBody')">
+                            <i class="fas fa-copy mr-1"></i>Copy
+                        </button>
+                        <pre><code id="rawBody" class="plaintext">-</code></pre>
+                    </div>
+                </div>
+            </div>
+        </main>
     </div>
 
     <script>
         let webhook = null;
         let events = [];
+        let selectedEvent = null;
         const webhookId = window.location.pathname.split('/')[2];
+
+        const methodColors = {
+            GET: 'bg-blue-600',
+            POST: 'bg-green-600',
+            PUT: 'bg-yellow-600',
+            DELETE: 'bg-red-600',
+            PATCH: 'bg-purple-600',
+            OPTIONS: 'bg-gray-600',
+            HEAD: 'bg-indigo-600'
+        };
 
         async function loadWebhook() {
             try {
@@ -79,14 +240,13 @@
                 webhook = await response.json();
 
                 document.getElementById('webhookName').textContent = webhook.name;
-                document.getElementById('webhookDescription').textContent = webhook.description || '';
+                document.getElementById('webhookDescription').textContent = webhook.description || webhook.application || '';
                 document.getElementById('webhookUrl').textContent = window.location.origin + webhook.url;
-                document.getElementById('webhookStatus').textContent = webhook.active ? 'Ativo' : 'Inativo';
-                document.getElementById('createdAt').textContent = formatDate(webhook.createdAt);
+                document.getElementById('webhookStatus').textContent = webhook.active ? 'Active' : 'Inactive';
 
                 loadEvents();
             } catch (error) {
-                console.error('Erro ao carregar webhook:', error);
+                console.error('Error loading webhook:', error);
             }
         }
 
@@ -96,136 +256,174 @@
                 const data = await response.json();
                 events = data.events;
 
-                document.getElementById('totalEvents').textContent = events.length;
-                document.getElementById('lastEvent').textContent = events[0]
-                    ? formatRelativeTime(events[0].timestamp)
-                    : 'Nenhum';
+                document.getElementById('eventCount').textContent = `${events.length} events`;
+                renderEventsList();
 
-                renderEvents();
+                // Auto-select first event if exists
+                if (events.length > 0 && !selectedEvent) {
+                    selectEvent(events[0]);
+                }
             } catch (error) {
-                console.error('Erro ao carregar eventos:', error);
+                console.error('Error loading events:', error);
             }
         }
 
-        function renderEvents() {
+        function renderEventsList() {
             const container = document.getElementById('eventsList');
 
             if (events.length === 0) {
                 container.innerHTML = `
-                    <div class="text-center py-12">
-                        <i class="fas fa-inbox text-6xl text-gray-300 mb-4"></i>
-                        <p class="text-gray-500 text-lg">Nenhum evento recebido</p>
-                        <p class="text-gray-400 text-sm mt-2">Envie uma requisição para este webhook</p>
+                    <div class="text-center py-8">
+                        <i class="fas fa-inbox text-3xl text-gray-700 mb-2"></i>
+                        <p class="text-gray-500 text-xs">No events yet</p>
                     </div>
                 `;
                 return;
             }
 
             container.innerHTML = events.map(event => `
-                <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="flex items-center space-x-3">
-                            <span class="px-3 py-1 ${getMethodColor(event.method)} text-white text-xs font-bold rounded">${event.method}</span>
-                            <span class="text-gray-500 text-sm">${formatTime(event.timestamp)}</span>
-                            <span class="text-gray-400 text-xs">IP: ${event.ip}</span>
-                        </div>
-                        <button onclick="deleteEvent(${event.id})" class="text-red-500 hover:text-red-700">
-                            <i class="fas fa-trash"></i>
-                        </button>
+                <div class="sidebar-item ${selectedEvent?.id === event.id ? 'active' : ''} p-3 rounded" onclick='selectEventById(${event.id})'>
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="method-badge ${methodColors[event.method] || 'bg-gray-600'} text-white">${event.method}</span>
+                        <span class="text-xs text-gray-500">#${event.id}</span>
                     </div>
-
-                    <div class="mb-3">
-                        <button onclick="toggleDetails(${event.id})" class="text-purple-600 hover:text-purple-700 text-sm font-medium">
-                            <i class="fas fa-chevron-down mr-1"></i>Ver Detalhes
-                        </button>
-                    </div>
-
-                    <div id="details-${event.id}" class="hidden space-y-3">
-                        ${Object.keys(event.query).length > 0 ? `
-                        <div>
-                            <p class="text-sm font-bold text-gray-700 mb-1">Query Params:</p>
-                            <pre class="bg-gray-50 p-3 rounded text-xs overflow-x-auto">${JSON.stringify(event.query, null, 2)}</pre>
-                        </div>
-                        ` : ''}
-
-                        <div>
-                            <p class="text-sm font-bold text-gray-700 mb-1">Headers:</p>
-                            <pre class="bg-gray-50 p-3 rounded text-xs overflow-x-auto max-h-48">${JSON.stringify(event.headers, null, 2)}</pre>
-                        </div>
-
-                        <div>
-                            <p class="text-sm font-bold text-gray-700 mb-1">Body:</p>
-                            <pre class="bg-gray-50 p-3 rounded text-xs overflow-x-auto max-h-64">${typeof event.body === 'object' ? JSON.stringify(event.body, null, 2) : event.body}</pre>
-                        </div>
-                    </div>
+                    <div class="text-xs text-gray-400 mb-1">${formatTime(event.timestamp)}</div>
+                    <div class="text-xs text-gray-500 truncate">${event.ip}</div>
                 </div>
             `).join('');
         }
 
-        function toggleDetails(eventId) {
-            const details = document.getElementById(`details-${eventId}`);
-            details.classList.toggle('hidden');
+        function selectEventById(id) {
+            const event = events.find(e => e.id === id);
+            if (event) selectEvent(event);
         }
 
-        async function deleteEvent(eventId) {
-            if (!confirm('Deletar este evento?')) return;
+        function selectEvent(event) {
+            selectedEvent = event;
+            renderEventsList();
+
+            // Hide empty state, show details
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('eventDetails').classList.remove('hidden');
+
+            // Populate event details
+            document.getElementById('eventMethod').textContent = event.method;
+            document.getElementById('eventMethod').className = `method-badge ${methodColors[event.method]} text-white`;
+            document.getElementById('eventTime').textContent = formatDateTime(event.timestamp);
+            document.getElementById('eventPath').textContent = event.path;
+            document.getElementById('eventIp').textContent = event.ip;
+            document.getElementById('eventId').textContent = event.id;
+
+            // Query params
+            const querySection = document.getElementById('querySection');
+            if (Object.keys(event.query).length > 0) {
+                querySection.classList.remove('hidden');
+                document.getElementById('queryParams').textContent = JSON.stringify(event.query, null, 2);
+            } else {
+                querySection.classList.add('hidden');
+            }
+
+            // Headers
+            document.getElementById('headers').textContent = JSON.stringify(event.headers, null, 2);
+
+            // Body
+            const bodyContent = typeof event.body === 'object'
+                ? JSON.stringify(event.body, null, 2)
+                : event.body || '(empty)';
+            document.getElementById('body').textContent = bodyContent;
+
+            // Raw Body
+            document.getElementById('rawBody').textContent = event.rawBody || '(empty)';
+
+            // Apply syntax highlighting
+            document.querySelectorAll('pre code').forEach((block) => {
+                hljs.highlightElement(block);
+            });
+        }
+
+        async function deleteCurrentEvent() {
+            if (!selectedEvent) return;
+            if (!confirm('Delete this event?')) return;
 
             try {
-                await fetch(`/api/webhooks/${webhookId}/events/${eventId}`, { method: 'DELETE' });
-                loadEvents();
+                await fetch(`/api/webhooks/${webhookId}/events/${selectedEvent.id}`, { method: 'DELETE' });
+
+                // Remove from events array
+                events = events.filter(e => e.id !== selectedEvent.id);
+
+                // Select next event or clear
+                if (events.length > 0) {
+                    selectEvent(events[0]);
+                } else {
+                    selectedEvent = null;
+                    document.getElementById('emptyState').classList.remove('hidden');
+                    document.getElementById('eventDetails').classList.add('hidden');
+                }
+
+                renderEventsList();
+                document.getElementById('eventCount').textContent = `${events.length} events`;
             } catch (error) {
-                console.error('Erro ao deletar evento:', error);
+                console.error('Error deleting event:', error);
             }
         }
 
         async function clearEvents() {
-            if (!confirm('Deletar TODOS os eventos deste webhook?')) return;
+            if (!confirm('Delete ALL events? This cannot be undone.')) return;
 
             try {
                 await fetch(`/api/webhooks/${webhookId}/events`, { method: 'DELETE' });
-                loadEvents();
+                events = [];
+                selectedEvent = null;
+
+                document.getElementById('emptyState').classList.remove('hidden');
+                document.getElementById('eventDetails').classList.add('hidden');
+                renderEventsList();
+                document.getElementById('eventCount').textContent = '0 events';
             } catch (error) {
-                console.error('Erro ao limpar eventos:', error);
+                console.error('Error clearing events:', error);
             }
         }
 
         function copyUrl() {
             const url = document.getElementById('webhookUrl').textContent;
-            navigator.clipboard.writeText(url);
-            alert('URL copiada!');
+            copyToClipboard(url);
         }
 
-        function getMethodColor(method) {
-            const colors = {
-                GET: 'bg-blue-500',
-                POST: 'bg-green-500',
-                PUT: 'bg-yellow-500',
-                DELETE: 'bg-red-500',
-                PATCH: 'bg-purple-500'
-            };
-            return colors[method] || 'bg-gray-500';
+        function copySection(elementId) {
+            const text = document.getElementById(elementId).textContent;
+            copyToClipboard(text);
         }
 
-        function formatDate(isoDate) {
-            return new Date(isoDate).toLocaleString('pt-BR');
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show temporary success message
+                showToast('Copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+            });
+        }
+
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+            toast.innerHTML = `<i class="fas fa-check mr-2"></i>${message}`;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.remove();
+            }, 2000);
         }
 
         function formatTime(isoDate) {
-            return new Date(isoDate).toLocaleTimeString('pt-BR');
-        }
-
-        function formatRelativeTime(isoDate) {
-            const now = new Date();
             const date = new Date(isoDate);
-            const diff = Math.floor((now - date) / 1000);
-
-            if (diff < 60) return `${diff}s atrás`;
-            if (diff < 3600) return `${Math.floor(diff / 60)}min atrás`;
-            if (diff < 86400) return `${Math.floor(diff / 3600)}h atrás`;
-            return `${Math.floor(diff / 86400)}d atrás`;
+            return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         }
 
-        // Server-Sent Events para atualizações em tempo real
+        function formatDateTime(isoDate) {
+            return new Date(isoDate).toLocaleString('pt-BR');
+        }
+
+        // Server-Sent Events for real-time updates
         const eventSource = new EventSource(`/api/webhooks/${webhookId}/stream`);
         eventSource.onmessage = function(e) {
             if (e.data) {
@@ -233,9 +431,8 @@
             }
         };
 
-        // Inicializar
+        // Initialize
         loadWebhook();
-        setInterval(loadEvents, 10000); // Atualizar a cada 10 segundos
     </script>
 </body>
 </html>
