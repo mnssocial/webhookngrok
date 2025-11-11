@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webhook - Eventos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white/10 backdrop-blur-md border-b border-white/20">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <a href="/" class="text-white hover:text-purple-200">
+                        <i class="fas fa-arrow-left text-xl"></i>
+                    </a>
+                    <div>
+                        <h1 class="text-2xl font-bold text-white" id="webhookName">Carregando...</h1>
+                        <p class="text-white/70 text-sm" id="webhookDescription"></p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span id="webhookStatus" class="px-4 py-2 bg-white/20 rounded-lg text-white text-sm"></span>
+                    <button onclick="clearEvents()" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
+                        <i class="fas fa-trash mr-2"></i>Limpar Eventos
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-6 py-8">
+        <!-- Webhook URL Card -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <h3 class="text-lg font-bold text-gray-800 mb-3">Webhook URL</h3>
+            <div class="flex items-center space-x-3 bg-gray-50 rounded-lg p-4">
+                <code class="flex-1 text-purple-600 font-mono" id="webhookUrl">-</code>
+                <button onclick="copyUrl()" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">
+                    <i class="fas fa-copy mr-2"></i>Copiar
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-3 gap-6 mb-6">
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <p class="text-gray-500 text-sm">Total de Eventos</p>
+                <p class="text-3xl font-bold text-gray-800" id="totalEvents">0</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <p class="text-gray-500 text-sm">Último Evento</p>
+                <p class="text-lg font-bold text-gray-800" id="lastEvent">-</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <p class="text-gray-500 text-sm">Criado em</p>
+                <p class="text-lg font-bold text-gray-800" id="createdAt">-</p>
+            </div>
+        </div>
+
+        <!-- Events List -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Eventos Recebidos</h2>
+            <div id="eventsList" class="space-y-4">
+                <!-- Events will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let webhook = null;
+        let events = [];
+        const webhookId = window.location.pathname.split('/')[2];
+
+        async function loadWebhook() {
+            try {
+                const response = await fetch(`/api/webhooks/${webhookId}`);
+                webhook = await response.json();
+
+                document.getElementById('webhookName').textContent = webhook.name;
+                document.getElementById('webhookDescription').textContent = webhook.description || '';
+                document.getElementById('webhookUrl').textContent = window.location.origin + webhook.url;
+                document.getElementById('webhookStatus').textContent = webhook.active ? 'Ativo' : 'Inativo';
+                document.getElementById('createdAt').textContent = formatDate(webhook.createdAt);
+
+                loadEvents();
+            } catch (error) {
+                console.error('Erro ao carregar webhook:', error);
+            }
+        }
+
+        async function loadEvents() {
+            try {
+                const response = await fetch(`/api/webhooks/${webhookId}/events`);
+                const data = await response.json();
+                events = data.events;
+
+                document.getElementById('totalEvents').textContent = events.length;
+                document.getElementById('lastEvent').textContent = events[0]
+                    ? formatRelativeTime(events[0].timestamp)
+                    : 'Nenhum';
+
+                renderEvents();
+            } catch (error) {
+                console.error('Erro ao carregar eventos:', error);
+            }
+        }
+
+        function renderEvents() {
+            const container = document.getElementById('eventsList');
+
+            if (events.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12">
+                        <i class="fas fa-inbox text-6xl text-gray-300 mb-4"></i>
+                        <p class="text-gray-500 text-lg">Nenhum evento recebido</p>
+                        <p class="text-gray-400 text-sm mt-2">Envie uma requisição para este webhook</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = events.map(event => `
+                <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center space-x-3">
+                            <span class="px-3 py-1 ${getMethodColor(event.method)} text-white text-xs font-bold rounded">${event.method}</span>
+                            <span class="text-gray-500 text-sm">${formatTime(event.timestamp)}</span>
+                            <span class="text-gray-400 text-xs">IP: ${event.ip}</span>
+                        </div>
+                        <button onclick="deleteEvent(${event.id})" class="text-red-500 hover:text-red-700">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+
+                    <div class="mb-3">
+                        <button onclick="toggleDetails(${event.id})" class="text-purple-600 hover:text-purple-700 text-sm font-medium">
+                            <i class="fas fa-chevron-down mr-1"></i>Ver Detalhes
+                        </button>
+                    </div>
+
+                    <div id="details-${event.id}" class="hidden space-y-3">
+                        ${Object.keys(event.query).length > 0 ? `
+                        <div>
+                            <p class="text-sm font-bold text-gray-700 mb-1">Query Params:</p>
+                            <pre class="bg-gray-50 p-3 rounded text-xs overflow-x-auto">${JSON.stringify(event.query, null, 2)}</pre>
+                        </div>
+                        ` : ''}
+
+                        <div>
+                            <p class="text-sm font-bold text-gray-700 mb-1">Headers:</p>
+                            <pre class="bg-gray-50 p-3 rounded text-xs overflow-x-auto max-h-48">${JSON.stringify(event.headers, null, 2)}</pre>
+                        </div>
+
+                        <div>
+                            <p class="text-sm font-bold text-gray-700 mb-1">Body:</p>
+                            <pre class="bg-gray-50 p-3 rounded text-xs overflow-x-auto max-h-64">${typeof event.body === 'object' ? JSON.stringify(event.body, null, 2) : event.body}</pre>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleDetails(eventId) {
+            const details = document.getElementById(`details-${eventId}`);
+            details.classList.toggle('hidden');
+        }
+
+        async function deleteEvent(eventId) {
+            if (!confirm('Deletar este evento?')) return;
+
+            try {
+                await fetch(`/api/webhooks/${webhookId}/events/${eventId}`, { method: 'DELETE' });
+                loadEvents();
+            } catch (error) {
+                console.error('Erro ao deletar evento:', error);
+            }
+        }
+
+        async function clearEvents() {
+            if (!confirm('Deletar TODOS os eventos deste webhook?')) return;
+
+            try {
+                await fetch(`/api/webhooks/${webhookId}/events`, { method: 'DELETE' });
+                loadEvents();
+            } catch (error) {
+                console.error('Erro ao limpar eventos:', error);
+            }
+        }
+
+        function copyUrl() {
+            const url = document.getElementById('webhookUrl').textContent;
+            navigator.clipboard.writeText(url);
+            alert('URL copiada!');
+        }
+
+        function getMethodColor(method) {
+            const colors = {
+                GET: 'bg-blue-500',
+                POST: 'bg-green-500',
+                PUT: 'bg-yellow-500',
+                DELETE: 'bg-red-500',
+                PATCH: 'bg-purple-500'
+            };
+            return colors[method] || 'bg-gray-500';
+        }
+
+        function formatDate(isoDate) {
+            return new Date(isoDate).toLocaleString('pt-BR');
+        }
+
+        function formatTime(isoDate) {
+            return new Date(isoDate).toLocaleTimeString('pt-BR');
+        }
+
+        function formatRelativeTime(isoDate) {
+            const now = new Date();
+            const date = new Date(isoDate);
+            const diff = Math.floor((now - date) / 1000);
+
+            if (diff < 60) return `${diff}s atrás`;
+            if (diff < 3600) return `${Math.floor(diff / 60)}min atrás`;
+            if (diff < 86400) return `${Math.floor(diff / 3600)}h atrás`;
+            return `${Math.floor(diff / 86400)}d atrás`;
+        }
+
+        // Server-Sent Events para atualizações em tempo real
+        const eventSource = new EventSource(`/api/webhooks/${webhookId}/stream`);
+        eventSource.onmessage = function(e) {
+            if (e.data) {
+                loadEvents();
+            }
+        };
+
+        // Inicializar
+        loadWebhook();
+        setInterval(loadEvents, 10000); // Atualizar a cada 10 segundos
+    </script>
+</body>
+</html>
