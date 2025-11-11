@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const crypto = require('crypto');
+const { exec, spawn } = require('child_process');
 
 const app = express();
 const PORT = 3000;
@@ -10,6 +11,11 @@ const PORT = 3000;
 let webhooks = []; // Lista de webhooks cadastrados
 let webhookIdCounter = 1;
 let eventIdCounter = 1;
+
+// Ngrok management
+let ngrokProcess = null;
+let ngrokPublicUrl = null;
+let ngrokAuthToken = null;
 
 // Middleware
 app.use(cors());
@@ -262,6 +268,85 @@ app.get('/api/webhooks/:id/stream', (req, res) => {
   });
 });
 
+// ==================== NGROK MANAGEMENT ====================
+
+// Get ngrok status
+app.get('/api/ngrok/status', (req, res) => {
+  res.json({
+    active: ngrokProcess !== null,
+    publicUrl: ngrokPublicUrl,
+    hasToken: ngrokAuthToken !== null
+  });
+});
+
+// Start ngrok tunnel
+app.post('/api/ngrok/start', async (req, res) => {
+  const { authToken } = req.body;
+
+  if (!authToken) {
+    return res.status(400).json({ error: 'Auth token é obrigatório' });
+  }
+
+  try {
+    // Configure authtoken
+    exec(`ngrok config add-authtoken ${authToken}`, (error) => {
+      if (error) {
+        console.error('Erro ao configurar ngrok:', error);
+        return res.status(500).json({ error: 'Erro ao configurar ngrok' });
+      }
+
+      ngrokAuthToken = authToken;
+
+      // Start ngrok
+      ngrokProcess = spawn('ngrok', ['http', PORT.toString()]);
+
+      // Wait for ngrok to start and get URL
+      setTimeout(async () => {
+        try {
+          exec('curl -s http://localhost:4040/api/tunnels', (error, stdout) => {
+            if (error) {
+              console.error('Erro ao buscar URL do ngrok:', error);
+              return;
+            }
+
+            try {
+              const data = JSON.parse(stdout);
+              if (data.tunnels && data.tunnels.length > 0) {
+                ngrokPublicUrl = data.tunnels[0].public_url;
+                console.log(`✅ Ngrok tunnel ativo: ${ngrokPublicUrl}`);
+              }
+            } catch (e) {
+              console.error('Erro ao parsear resposta do ngrok:', e);
+            }
+          });
+        } catch (error) {
+          console.error('Erro ao obter URL do ngrok:', error);
+        }
+      }, 3000);
+
+      res.json({
+        success: true,
+        message: 'Ngrok iniciado com sucesso! URL será disponibilizada em instantes.'
+      });
+    });
+  } catch (error) {
+    console.error('Erro ao iniciar ngrok:', error);
+    res.status(500).json({ error: 'Erro ao iniciar ngrok' });
+  }
+});
+
+// Stop ngrok
+app.post('/api/ngrok/stop', (req, res) => {
+  if (ngrokProcess) {
+    ngrokProcess.kill();
+    ngrokProcess = null;
+    ngrokPublicUrl = null;
+    console.log('🛑 Ngrok tunnel encerrado');
+  }
+
+  res.json({ success: true, message: 'Ngrok encerrado' });
+});
+
 // ==================== ESTATÍSTICAS ====================
 
 app.get('/api/stats', (req, res) => {
@@ -273,7 +358,9 @@ app.get('/api/stats', (req, res) => {
     totalWebhooks,
     totalEvents,
     activeWebhooks,
-    inactiveWebhooks: totalWebhooks - activeWebhooks
+    inactiveWebhooks: totalWebhooks - activeWebhooks,
+    ngrokActive: ngrokProcess !== null,
+    ngrokUrl: ngrokPublicUrl
   });
 });
 

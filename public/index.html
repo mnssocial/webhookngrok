@@ -117,10 +117,15 @@
                             <span class="text-gray-500">Status:</span>
                             <span class="text-green-500 ml-2">● Online</span>
                         </div>
-                        <div class="text-gray-400 break-all">
+                        <div class="text-gray-400">
                             <span class="text-gray-500">Ngrok:</span>
-                            <a href="#" class="text-[#569cd6] ml-2 hover:underline text-xs" id="ngrokLink">Active</a>
+                            <span class="ml-2" id="ngrokStatus">
+                                <span class="text-gray-600">● Offline</span>
+                            </span>
                         </div>
+                        <button onclick="openNgrokModal()" class="w-full mt-3 bg-[#0e639c] hover:bg-[#1177bb] text-white px-3 py-2 rounded text-xs transition code-font">
+                            <i class="fas fa-rocket mr-1"></i>Ativar Ngrok
+                        </button>
                     </div>
                 </div>
             </div>
@@ -200,6 +205,69 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal - Ngrok Setup -->
+    <div id="ngrokModal" class="hidden fixed inset-0 bg-black/70 modal-backdrop z-50 flex items-center justify-center p-4">
+        <div class="bg-[#252526] border border-[#3c3c3c] rounded-lg shadow-2xl max-w-md w-full">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between p-4 border-b border-[#3c3c3c]">
+                <h3 class="text-lg font-semibold text-gray-200 code-font">
+                    <i class="fas fa-rocket text-[#569cd6] mr-2"></i>
+                    Ativar Ngrok Tunnel
+                </h3>
+                <button onclick="closeNgrokModal()" class="text-gray-500 hover:text-gray-300">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-6">
+                <div id="ngrokSetup" class="space-y-4">
+                    <div class="bg-[#1e1e1e] border border-[#3c3c3c] rounded p-4 mb-4">
+                        <p class="text-sm text-gray-400 code-font mb-2">
+                            <span class="text-gray-600">//</span> Cole seu token do ngrok abaixo:
+                        </p>
+                        <p class="text-xs text-gray-500 code-font">
+                            Pegue em: <a href="https://dashboard.ngrok.com/get-started/your-authtoken" target="_blank" class="text-[#569cd6] hover:underline">dashboard.ngrok.com</a>
+                        </p>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-400 mb-2 code-font">
+                            <span class="text-[#569cd6]">const</span> authToken<span class="text-gray-600">:</span> <span class="text-[#4ec9b0]">string</span>
+                        </label>
+                        <input type="text" id="ngrokToken"
+                            class="w-full px-3 py-2 bg-[#1e1e1e] border border-[#3c3c3c] rounded text-gray-200 focus:border-[#569cd6] focus:outline-none code-font text-sm"
+                            placeholder="2abc...XYZ">
+                    </div>
+
+                    <button onclick="activateNgrok()"
+                        class="w-full px-4 py-3 bg-[#0e639c] hover:bg-[#1177bb] text-white rounded font-medium text-sm code-font transition">
+                        <i class="fas fa-rocket mr-2"></i>Ativar Sistema Completo
+                    </button>
+                </div>
+
+                <div id="ngrokActivating" class="hidden text-center py-8">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[#569cd6] mx-auto mb-4"></div>
+                    <p class="text-gray-400 code-font">Ativando ngrok tunnel...</p>
+                    <p class="text-gray-600 text-xs code-font mt-2">Aguarde alguns segundos</p>
+                </div>
+
+                <div id="ngrokSuccess" class="hidden text-center py-8">
+                    <i class="fas fa-check-circle text-green-500 text-5xl mb-4"></i>
+                    <p class="text-green-400 font-bold code-font mb-2">Sistema Ativado!</p>
+                    <p class="text-gray-400 text-sm code-font mb-4">Seu webhook está público</p>
+                    <div class="bg-[#1e1e1e] border border-[#3c3c3c] rounded p-3 mb-4">
+                        <p class="text-xs text-gray-500 code-font mb-1">URL Pública:</p>
+                        <code class="text-[#569cd6] text-sm code-font break-all" id="ngrokPublicUrl">-</code>
+                    </div>
+                    <button onclick="closeNgrokModal()" class="bg-[#0e639c] hover:bg-[#1177bb] text-white px-6 py-2 rounded code-font text-sm">
+                        Fechar
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -450,9 +518,95 @@
             return `${Math.floor(diff / 86400)}d ago`;
         }
 
+        // ==================== NGROK FUNCTIONS ====================
+
+        async function checkNgrokStatus() {
+            try {
+                const response = await fetch('/api/ngrok/status');
+                const status = await response.json();
+
+                if (status.active && status.publicUrl) {
+                    ngrokUrl = status.publicUrl;
+                    document.getElementById('ngrokStatus').innerHTML = '<span class="text-green-500">● Online</span>';
+                    renderWebhooks(); // Re-render para atualizar URLs
+                } else {
+                    document.getElementById('ngrokStatus').innerHTML = '<span class="text-gray-600">● Offline</span>';
+                }
+            } catch (error) {
+                console.error('Erro ao verificar ngrok:', error);
+            }
+        }
+
+        function openNgrokModal() {
+            document.getElementById('ngrokModal').classList.remove('hidden');
+            document.getElementById('ngrokSetup').classList.remove('hidden');
+            document.getElementById('ngrokActivating').classList.add('hidden');
+            document.getElementById('ngrokSuccess').classList.add('hidden');
+        }
+
+        function closeNgrokModal() {
+            document.getElementById('ngrokModal').classList.add('hidden');
+        }
+
+        async function activateNgrok() {
+            const token = document.getElementById('ngrokToken').value.trim();
+
+            if (!token) {
+                showToast('Por favor, cole o token do ngrok', true);
+                return;
+            }
+
+            // Hide setup, show loading
+            document.getElementById('ngrokSetup').classList.add('hidden');
+            document.getElementById('ngrokActivating').classList.remove('hidden');
+
+            try {
+                const response = await fetch('/api/ngrok/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ authToken: token })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Wait a bit for ngrok to start
+                    setTimeout(async () => {
+                        // Get the public URL
+                        const statusResponse = await fetch('/api/ngrok/status');
+                        const status = await statusResponse.json();
+
+                        if (status.publicUrl) {
+                            ngrokUrl = status.publicUrl;
+                            document.getElementById('ngrokPublicUrl').textContent = status.publicUrl;
+
+                            // Hide loading, show success
+                            document.getElementById('ngrokActivating').classList.add('hidden');
+                            document.getElementById('ngrokSuccess').classList.remove('hidden');
+
+                            // Update sidebar
+                            document.getElementById('ngrokStatus').innerHTML = '<span class="text-green-500">● Online</span>';
+
+                            // Reload webhooks with new URL
+                            renderWebhooks();
+                        }
+                    }, 4000);
+                } else {
+                    showToast('Erro ao ativar ngrok', true);
+                    closeNgrokModal();
+                }
+            } catch (error) {
+                console.error('Erro ao ativar ngrok:', error);
+                showToast('Erro ao ativar ngrok', true);
+                closeNgrokModal();
+            }
+        }
+
         // Initialize
         loadData();
+        checkNgrokStatus();
         setInterval(loadStats, 5000);
+        setInterval(checkNgrokStatus, 10000); // Check ngrok every 10s
     </script>
 </body>
 </html>
