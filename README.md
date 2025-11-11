@@ -1,32 +1,49 @@
-# 📡 Webhook Dashboard - Gerenciador de Eventos
+# 🔥 Webhook Manager - Developer Console
 
-Sistema completo de webhook com painel visual para gerenciar e visualizar eventos em tempo real, integrado com ngrok.
+Sistema profissional de gerenciamento de webhooks com interface estilo VS Code. Seu próprio webhook.site sem limites!
 
-## 🚀 Características
+## ✨ Características
 
-- ✅ **Painel Visual Moderno**: Interface bonita e intuitiva para visualizar webhooks
-- ✅ **Tempo Real**: Atualização automática com Server-Sent Events (SSE)
-- ✅ **Múltiplos Métodos HTTP**: Suporta GET, POST, PUT, DELETE, PATCH, etc.
-- ✅ **Detalhes Completos**: Visualize headers, body, query params, IP de origem
-- ✅ **Gerenciamento**: Deletar eventos individuais ou limpar todos
-- ✅ **Estatísticas**: Contador de eventos e timestamp do último evento
-- ✅ **Ngrok Ready**: Pronto para expor via ngrok
+- 🎨 **Interface VS Code Dark Theme**: Visual profissional de editor de código
+- 📡 **CRUD Completo**: Crie, edite, pause e delete webhooks
+- ⚡ **Tempo Real**: Atualização automática via Server-Sent Events
+- 🔍 **Syntax Highlighting**: JSON colorido com highlight.js
+- 📋 **Copy Everywhere**: Botões de copiar em todas as seções
+- 🎯 **Zero Limites**: Sem restrições de requisições
+- 🌐 **Ngrok Integration**: Exponha publicamente em segundos
+- 💻 **Split-Screen**: Sidebar com eventos + painel de detalhes
 
-## 📦 Instalação
+## 🚀 Início Rápido (1 Comando!)
+
+### Opção 1: Rodar TUDO automaticamente
+```bash
+npm start
+```
+
+### Opção 2: Com auto-reload (desenvolvimento)
+```bash
+npm run dev
+```
+
+Pronto! Acesse: **http://localhost:3000**
+
+---
+
+## 📦 Instalação Completa
 
 ### 1. Instalar dependências
 ```bash
 npm install
 ```
 
-### 2. Instalar ngrok (se ainda não tiver)
+### 2. (Opcional) Instalar ngrok
 ```bash
 brew install ngrok
 ```
 
-### 3. Configurar ngrok authtoken
+### 3. (Opcional) Configurar ngrok
 ```bash
-ngrok config add-authtoken 34fuZx75weHLrEgZxQof0VADsV8_4pC8NC31A9V9xTKSSjSnN
+ngrok config add-authtoken SEU_TOKEN_AQUI
 ```
 
 ## 🎯 Como Usar
