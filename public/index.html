@@ -3,132 +3,200 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Webhook Management System</title>
+    <title>Webhook Management - Developer Console</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        }
+        .webhook-card {
+            transition: all 0.2s;
+            background: #1e1e1e;
+            border: 1px solid #3c3c3c;
+        }
+        .webhook-card:hover {
+            border-color: #569cd6;
+            box-shadow: 0 0 20px rgba(86, 156, 214, 0.3);
+        }
+        .stat-card {
+            background: #252526;
+            border: 1px solid #3c3c3c;
+        }
+        .modal-backdrop {
+            backdrop-filter: blur(4px);
+        }
+        .code-font {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        }
+        .method-badge {
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 11px;
+            padding: 4px 10px;
+            border-radius: 3px;
+        }
+        .url-box {
+            background: #1e1e1e;
+            border: 1px solid #3c3c3c;
+            font-family: 'Consolas', monospace;
+        }
+        .btn-primary {
+            background: #0e639c;
+            transition: all 0.2s;
+        }
+        .btn-primary:hover {
+            background: #1177bb;
+        }
+        .sidebar {
+            background: #252526;
+            border-right: 1px solid #3c3c3c;
+        }
+    </style>
 </head>
-<body class="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 min-h-screen">
-    <!-- Header -->
-    <header class="bg-white/10 backdrop-blur-md border-b border-white/20">
-        <div class="container mx-auto px-6 py-4">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-3">
-                    <i class="fas fa-webhook text-3xl text-white"></i>
-                    <h1 class="text-2xl font-bold text-white">Webhook Manager</h1>
+<body class="bg-[#1e1e1e] text-gray-200 min-h-screen">
+    <!-- Top Bar (VS Code style) -->
+    <header class="bg-[#323233] border-b border-[#3c3c3c] px-4 py-2">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-code text-[#569cd6] text-xl"></i>
+                    <span class="text-lg font-semibold text-gray-200">Webhook Manager</span>
                 </div>
-                <button onclick="openCreateModal()" class="bg-white text-purple-600 px-6 py-2 rounded-lg font-semibold hover:bg-purple-50 transition flex items-center space-x-2">
-                    <i class="fas fa-plus"></i>
-                    <span>Novo Webhook</span>
-                </button>
+                <div class="hidden md:flex items-center space-x-6 text-sm text-gray-400">
+                    <span class="flex items-center space-x-1">
+                        <i class="fas fa-circle text-green-500 text-xs"></i>
+                        <span>Server Running</span>
+                    </span>
+                </div>
             </div>
+            <button onclick="openCreateModal()" class="bg-[#0e639c] hover:bg-[#1177bb] text-white px-4 py-1.5 rounded text-sm font-medium transition">
+                <i class="fas fa-plus mr-2"></i>New Webhook
+            </button>
         </div>
     </header>
 
-    <!-- Stats Cards -->
-    <div class="container mx-auto px-6 py-8">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div class="bg-white rounded-xl shadow-lg p-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-gray-500 text-sm font-medium">Total Webhooks</p>
-                        <p class="text-3xl font-bold text-gray-800" id="totalWebhooks">0</p>
+    <div class="flex h-[calc(100vh-42px)]">
+        <!-- Sidebar (File Explorer style) -->
+        <aside class="sidebar w-64 overflow-y-auto">
+            <div class="p-4">
+                <div class="mb-6">
+                    <div class="text-xs font-semibold text-gray-500 uppercase mb-3 flex items-center">
+                        <i class="fas fa-chart-bar mr-2"></i>Statistics
                     </div>
-                    <div class="bg-blue-100 rounded-full p-3">
-                        <i class="fas fa-link text-2xl text-blue-600"></i>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex items-center justify-between p-2 bg-[#1e1e1e] rounded">
+                            <span class="text-gray-400">Webhooks</span>
+                            <span class="text-[#4ec9b0] font-bold" id="totalWebhooks">0</span>
+                        </div>
+                        <div class="flex items-center justify-between p-2 bg-[#1e1e1e] rounded">
+                            <span class="text-gray-400">Events</span>
+                            <span class="text-[#dcdcaa] font-bold" id="totalEvents">0</span>
+                        </div>
+                        <div class="flex items-center justify-between p-2 bg-[#1e1e1e] rounded">
+                            <span class="text-gray-400">Active</span>
+                            <span class="text-green-500 font-bold" id="activeWebhooks">0</span>
+                        </div>
+                        <div class="flex items-center justify-between p-2 bg-[#1e1e1e] rounded">
+                            <span class="text-gray-400">Inactive</span>
+                            <span class="text-gray-500 font-bold" id="inactiveWebhooks">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="text-xs font-semibold text-gray-500 uppercase mb-3 flex items-center">
+                        <i class="fas fa-server mr-2"></i>Server Info
+                    </div>
+                    <div class="space-y-2 text-xs">
+                        <div class="text-gray-400">
+                            <span class="text-gray-500">Port:</span>
+                            <span class="text-[#569cd6] ml-2">3000</span>
+                        </div>
+                        <div class="text-gray-400">
+                            <span class="text-gray-500">Status:</span>
+                            <span class="text-green-500 ml-2">● Online</span>
+                        </div>
+                        <div class="text-gray-400 break-all">
+                            <span class="text-gray-500">Ngrok:</span>
+                            <a href="#" class="text-[#569cd6] ml-2 hover:underline text-xs" id="ngrokLink">Active</a>
+                        </div>
                     </div>
                 </div>
             </div>
+        </aside>
 
-            <div class="bg-white rounded-xl shadow-lg p-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-gray-500 text-sm font-medium">Total Eventos</p>
-                        <p class="text-3xl font-bold text-gray-800" id="totalEvents">0</p>
-                    </div>
-                    <div class="bg-green-100 rounded-full p-3">
-                        <i class="fas fa-bell text-2xl text-green-600"></i>
-                    </div>
-                </div>
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto bg-[#1e1e1e] p-6">
+            <!-- Header -->
+            <div class="mb-6">
+                <h1 class="text-2xl font-bold text-gray-200 mb-2 code-font">
+                    <span class="text-[#569cd6]">class</span> <span class="text-[#4ec9b0]">WebhookManager</span>
+                </h1>
+                <p class="text-sm text-gray-500 code-font">// Manage and monitor your webhook endpoints</p>
             </div>
 
-            <div class="bg-white rounded-xl shadow-lg p-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-gray-500 text-sm font-medium">Ativos</p>
-                        <p class="text-3xl font-bold text-gray-800" id="activeWebhooks">0</p>
-                    </div>
-                    <div class="bg-green-100 rounded-full p-3">
-                        <i class="fas fa-check-circle text-2xl text-green-600"></i>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-xl shadow-lg p-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-gray-500 text-sm font-medium">Inativos</p>
-                        <p class="text-3xl font-bold text-gray-800" id="inactiveWebhooks">0</p>
-                    </div>
-                    <div class="bg-gray-100 rounded-full p-3">
-                        <i class="fas fa-pause-circle text-2xl text-gray-600"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Webhooks List -->
-        <div class="bg-white rounded-xl shadow-lg p-6">
-            <h2 class="text-2xl font-bold text-gray-800 mb-6">Seus Webhooks</h2>
+            <!-- Webhooks Grid -->
             <div id="webhooksList" class="space-y-4">
-                <!-- Webhooks serão inseridos aqui -->
+                <!-- Webhooks will be loaded here -->
             </div>
-        </div>
+        </main>
     </div>
 
-    <!-- Modal - Criar/Editar Webhook -->
-    <div id="webhookModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 transform transition-all">
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="text-2xl font-bold text-gray-800" id="modalTitle">Novo Webhook</h3>
-                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
-                    <i class="fas fa-times text-xl"></i>
+    <!-- Modal - Create/Edit Webhook -->
+    <div id="webhookModal" class="hidden fixed inset-0 bg-black/70 modal-backdrop z-50 flex items-center justify-center p-4">
+        <div class="bg-[#252526] border border-[#3c3c3c] rounded-lg shadow-2xl max-w-lg w-full">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between p-4 border-b border-[#3c3c3c]">
+                <h3 class="text-lg font-semibold text-gray-200 code-font" id="modalTitle">
+                    <span class="text-[#569cd6]">new</span> Webhook()
+                </h3>
+                <button onclick="closeModal()" class="text-gray-500 hover:text-gray-300">
+                    <i class="fas fa-times"></i>
                 </button>
             </div>
 
-            <form id="webhookForm" onsubmit="saveWebhook(event)">
+            <!-- Modal Body -->
+            <form id="webhookForm" onsubmit="saveWebhook(event)" class="p-4">
                 <input type="hidden" id="webhookId">
 
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Nome *</label>
+                        <label class="block text-xs font-medium text-gray-400 mb-2 code-font">
+                            <span class="text-[#569cd6]">const</span> name<span class="text-gray-600">:</span> <span class="text-[#4ec9b0]">string</span>
+                        </label>
                         <input type="text" id="webhookName" required
-                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            placeholder="Ex: API Pagamentos">
+                            class="w-full px-3 py-2 bg-[#1e1e1e] border border-[#3c3c3c] rounded text-gray-200 focus:border-[#569cd6] focus:outline-none code-font text-sm"
+                            placeholder="payment-webhook">
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Aplicação</label>
+                        <label class="block text-xs font-medium text-gray-400 mb-2 code-font">
+                            <span class="text-[#569cd6]">const</span> application<span class="text-gray-600">:</span> <span class="text-[#4ec9b0]">string</span>
+                        </label>
                         <input type="text" id="webhookApplication"
-                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            placeholder="Ex: App Mobile">
+                            class="w-full px-3 py-2 bg-[#1e1e1e] border border-[#3c3c3c] rounded text-gray-200 focus:border-[#569cd6] focus:outline-none code-font text-sm"
+                            placeholder="E-commerce API">
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
+                        <label class="block text-xs font-medium text-gray-400 mb-2 code-font">
+                            <span class="text-[#569cd6]">const</span> description<span class="text-gray-600">:</span> <span class="text-[#4ec9b0]">string</span>
+                        </label>
                         <textarea id="webhookDescription" rows="3"
-                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            placeholder="Descreva o propósito deste webhook..."></textarea>
+                            class="w-full px-3 py-2 bg-[#1e1e1e] border border-[#3c3c3c] rounded text-gray-200 focus:border-[#569cd6] focus:outline-none code-font text-sm"
+                            placeholder="// Receives payment confirmation events..."></textarea>
                     </div>
                 </div>
 
                 <div class="flex space-x-3 mt-6">
                     <button type="button" onclick="closeModal()"
-                        class="flex-1 px-6 py-3 border border-gray-300 rounded-lg font-semibold text-gray-700 hover:bg-gray-50 transition">
-                        Cancelar
+                        class="flex-1 px-4 py-2 bg-[#1e1e1e] border border-[#3c3c3c] rounded text-gray-300 hover:bg-[#2d2d30] transition text-sm code-font">
+                        Cancel
                     </button>
                     <button type="submit"
-                        class="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition">
-                        Salvar
+                        class="flex-1 px-4 py-2 btn-primary text-white rounded font-medium text-sm code-font">
+                        Save
                     </button>
                 </div>
             </form>
@@ -137,14 +205,12 @@
 
     <script>
         let webhooks = [];
-        let ngrokUrl = window.location.origin; // Será atualizado se ngrok estiver ativo
+        let ngrokUrl = window.location.origin;
 
-        // Carregar dados iniciais
         async function loadData() {
             await Promise.all([loadWebhooks(), loadStats()]);
         }
 
-        // Carregar estatísticas
         async function loadStats() {
             try {
                 const response = await fetch('/api/stats');
@@ -155,11 +221,10 @@
                 document.getElementById('activeWebhooks').textContent = stats.activeWebhooks;
                 document.getElementById('inactiveWebhooks').textContent = stats.inactiveWebhooks;
             } catch (error) {
-                console.error('Erro ao carregar estatísticas:', error);
+                console.error('Error loading stats:', error);
             }
         }
 
-        // Carregar webhooks
         async function loadWebhooks() {
             try {
                 const response = await fetch('/api/webhooks');
@@ -167,74 +232,98 @@
                 webhooks = data.webhooks;
                 renderWebhooks();
             } catch (error) {
-                console.error('Erro ao carregar webhooks:', error);
+                console.error('Error loading webhooks:', error);
             }
         }
 
-        // Renderizar lista de webhooks
         function renderWebhooks() {
             const container = document.getElementById('webhooksList');
 
             if (webhooks.length === 0) {
                 container.innerHTML = `
-                    <div class="text-center py-12">
-                        <i class="fas fa-inbox text-6xl text-gray-300 mb-4"></i>
-                        <p class="text-gray-500 text-lg">Nenhum webhook cadastrado</p>
-                        <p class="text-gray-400 text-sm mt-2">Clique em "Novo Webhook" para começar</p>
+                    <div class="flex flex-col items-center justify-center py-20 text-center">
+                        <i class="fas fa-folder-open text-6xl text-gray-700 mb-4"></i>
+                        <p class="text-gray-500 text-lg code-font">No webhooks found</p>
+                        <p class="text-gray-600 text-sm mt-2 code-font">// Click "New Webhook" to create one</p>
                     </div>
                 `;
                 return;
             }
 
             container.innerHTML = webhooks.map(webhook => `
-                <div class="border border-gray-200 rounded-xl p-6 hover:shadow-lg transition group">
+                <div class="webhook-card rounded-lg p-5">
                     <div class="flex items-start justify-between">
                         <div class="flex-1">
-                            <div class="flex items-center space-x-3 mb-2">
-                                <h3 class="text-xl font-bold text-gray-800">${webhook.name}</h3>
+                            <!-- Header -->
+                            <div class="flex items-center space-x-3 mb-3">
+                                <i class="fas fa-webhook text-[#569cd6] text-lg"></i>
+                                <h3 class="text-lg font-semibold text-gray-200 code-font">${webhook.name}</h3>
                                 ${webhook.active
-                                    ? '<span class="px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">Ativo</span>'
-                                    : '<span class="px-3 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded-full">Inativo</span>'
+                                    ? '<span class="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded code-font">active</span>'
+                                    : '<span class="px-2 py-0.5 bg-gray-500/20 text-gray-500 text-xs rounded code-font">inactive</span>'
                                 }
                             </div>
 
-                            ${webhook.application ? `<p class="text-sm text-gray-600 mb-2"><i class="fas fa-mobile-alt mr-2"></i>${webhook.application}</p>` : ''}
-                            ${webhook.description ? `<p class="text-sm text-gray-500 mb-3">${webhook.description}</p>` : ''}
+                            <!-- Info -->
+                            <div class="space-y-2 mb-4">
+                                ${webhook.application ? `
+                                <div class="text-sm text-gray-400 code-font">
+                                    <span class="text-gray-600">//</span> App: <span class="text-[#ce9178]">"${webhook.application}"</span>
+                                </div>
+                                ` : ''}
+                                ${webhook.description ? `
+                                <div class="text-sm text-gray-500 code-font">
+                                    <span class="text-gray-600">//</span> ${webhook.description}
+                                </div>
+                                ` : ''}
+                            </div>
 
-                            <div class="flex items-center space-x-2 bg-gray-50 rounded-lg p-3 mb-3">
-                                <code class="text-sm text-purple-600 flex-1 font-mono">${ngrokUrl}${webhook.url}</code>
-                                <button onclick="copyUrl('${ngrokUrl}${webhook.url}')" class="text-gray-400 hover:text-purple-600">
+                            <!-- URL Box -->
+                            <div class="url-box rounded p-3 mb-3 flex items-center space-x-2">
+                                <span class="text-gray-600 text-xs code-font">endpoint:</span>
+                                <code class="flex-1 text-xs text-[#569cd6] code-font break-all">${ngrokUrl}${webhook.url}</code>
+                                <button onclick="copyUrl('${ngrokUrl}${webhook.url}')"
+                                    class="text-gray-500 hover:text-[#569cd6] transition text-sm"
+                                    title="Copy URL">
                                     <i class="fas fa-copy"></i>
                                 </button>
                             </div>
 
-                            <div class="flex items-center space-x-6 text-sm text-gray-500">
-                                <span><i class="fas fa-calendar mr-2"></i>${formatDate(webhook.createdAt)}</span>
-                                <span><i class="fas fa-bell mr-2"></i>${webhook.eventCount} eventos</span>
-                                ${webhook.lastEvent ? `<span><i class="fas fa-clock mr-2"></i>${formatRelativeTime(webhook.lastEvent)}</span>` : ''}
+                            <!-- Stats -->
+                            <div class="flex items-center space-x-6 text-xs text-gray-500 code-font">
+                                <span>
+                                    <i class="fas fa-calendar-alt text-gray-600 mr-1"></i>
+                                    ${formatDate(webhook.createdAt)}
+                                </span>
+                                <span class="flex items-center">
+                                    <i class="fas fa-bell text-gray-600 mr-1"></i>
+                                    <span class="text-[#dcdcaa]">${webhook.eventCount}</span> events
+                                </span>
+                                ${webhook.lastEvent ? `
+                                <span class="text-gray-600">
+                                    last: ${formatRelativeTime(webhook.lastEvent)}
+                                </span>
+                                ` : ''}
                             </div>
                         </div>
 
-                        <div class="flex flex-col space-y-2 ml-4">
+                        <!-- Actions -->
+                        <div class="flex flex-col space-y-2 ml-6">
                             <button onclick="viewWebhook(${webhook.id})"
-                                class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition flex items-center space-x-2">
-                                <i class="fas fa-eye"></i>
-                                <span>Ver Eventos</span>
+                                class="px-4 py-2 bg-[#0e639c] hover:bg-[#1177bb] text-white rounded text-sm transition code-font whitespace-nowrap">
+                                <i class="fas fa-eye mr-2"></i>View
                             </button>
                             <button onclick="editWebhook(${webhook.id})"
-                                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center space-x-2">
-                                <i class="fas fa-edit"></i>
-                                <span>Editar</span>
+                                class="px-4 py-2 bg-[#1e1e1e] border border-[#3c3c3c] hover:border-[#569cd6] text-gray-300 rounded text-sm transition code-font">
+                                <i class="fas fa-edit mr-2"></i>Edit
                             </button>
                             <button onclick="toggleWebhook(${webhook.id}, ${!webhook.active})"
-                                class="px-4 py-2 ${webhook.active ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-green-600 hover:bg-green-700'} text-white rounded-lg transition flex items-center space-x-2">
-                                <i class="fas fa-${webhook.active ? 'pause' : 'play'}"></i>
-                                <span>${webhook.active ? 'Pausar' : 'Ativar'}</span>
+                                class="px-4 py-2 ${webhook.active ? 'bg-yellow-600/20 text-yellow-500 hover:bg-yellow-600/30' : 'bg-green-600/20 text-green-500 hover:bg-green-600/30'} rounded text-sm transition code-font">
+                                <i class="fas fa-${webhook.active ? 'pause' : 'play'} mr-2"></i>${webhook.active ? 'Pause' : 'Start'}
                             </button>
-                            <button onclick="deleteWebhook(${webhook.id}, '${webhook.name}')"
-                                class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition flex items-center space-x-2">
-                                <i class="fas fa-trash"></i>
-                                <span>Deletar</span>
+                            <button onclick="deleteWebhook(${webhook.id}, '${webhook.name.replace(/'/g, "\\'")}')"
+                                class="px-4 py-2 bg-red-600/20 text-red-400 hover:bg-red-600/30 rounded text-sm transition code-font">
+                                <i class="fas fa-trash mr-2"></i>Delete
                             </button>
                         </div>
                     </div>
@@ -242,20 +331,18 @@
             `).join('');
         }
 
-        // Abrir modal de criação
         function openCreateModal() {
-            document.getElementById('modalTitle').textContent = 'Novo Webhook';
+            document.getElementById('modalTitle').innerHTML = '<span class="text-[#569cd6]">new</span> Webhook()';
             document.getElementById('webhookForm').reset();
             document.getElementById('webhookId').value = '';
             document.getElementById('webhookModal').classList.remove('hidden');
         }
 
-        // Editar webhook
         function editWebhook(id) {
             const webhook = webhooks.find(w => w.id === id);
             if (!webhook) return;
 
-            document.getElementById('modalTitle').textContent = 'Editar Webhook';
+            document.getElementById('modalTitle').innerHTML = '<span class="text-[#569cd6]">edit</span> Webhook()';
             document.getElementById('webhookId').value = webhook.id;
             document.getElementById('webhookName').value = webhook.name;
             document.getElementById('webhookApplication').value = webhook.application || '';
@@ -263,12 +350,10 @@
             document.getElementById('webhookModal').classList.remove('hidden');
         }
 
-        // Fechar modal
         function closeModal() {
             document.getElementById('webhookModal').classList.add('hidden');
         }
 
-        // Salvar webhook
         async function saveWebhook(event) {
             event.preventDefault();
 
@@ -281,14 +366,12 @@
 
             try {
                 if (id) {
-                    // Atualizar
                     await fetch(`/api/webhooks/${id}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(data)
                     });
                 } else {
-                    // Criar
                     await fetch('/api/webhooks', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -298,13 +381,13 @@
 
                 closeModal();
                 await loadData();
+                showToast('Webhook saved successfully');
             } catch (error) {
-                console.error('Erro ao salvar webhook:', error);
-                alert('Erro ao salvar webhook');
+                console.error('Error saving webhook:', error);
+                showToast('Error saving webhook', true);
             }
         }
 
-        // Toggle ativo/inativo
         async function toggleWebhook(id, active) {
             try {
                 await fetch(`/api/webhooks/${id}`, {
@@ -313,57 +396,63 @@
                     body: JSON.stringify({ active })
                 });
                 await loadData();
+                showToast(`Webhook ${active ? 'activated' : 'paused'}`);
             } catch (error) {
-                console.error('Erro ao atualizar webhook:', error);
+                console.error('Error updating webhook:', error);
             }
         }
 
-        // Deletar webhook
         async function deleteWebhook(id, name) {
-            if (!confirm(`Tem certeza que deseja deletar o webhook "${name}"? Todos os eventos serão perdidos.`)) {
+            if (!confirm(`Delete webhook "${name}"? All events will be lost.`)) {
                 return;
             }
 
             try {
                 await fetch(`/api/webhooks/${id}`, { method: 'DELETE' });
                 await loadData();
+                showToast('Webhook deleted');
             } catch (error) {
-                console.error('Erro ao deletar webhook:', error);
+                console.error('Error deleting webhook:', error);
             }
         }
 
-        // Ver detalhes do webhook
         function viewWebhook(id) {
             window.location.href = `/webhook/${id}/view`;
         }
 
-        // Copiar URL
         function copyUrl(url) {
-            navigator.clipboard.writeText(url);
-            // TODO: Mostrar toast de sucesso
-            alert('URL copiada!');
+            navigator.clipboard.writeText(url).then(() => {
+                showToast('URL copied to clipboard');
+            });
         }
 
-        // Formatar data
+        function showToast(message, isError = false) {
+            const toast = document.createElement('div');
+            toast.className = `fixed bottom-4 right-4 ${isError ? 'bg-red-600' : 'bg-green-600'} text-white px-4 py-2 rounded shadow-lg z-50 code-font text-sm`;
+            toast.innerHTML = `<i class="fas fa-${isError ? 'exclamation-circle' : 'check'} mr-2"></i>${message}`;
+            document.body.appendChild(toast);
+
+            setTimeout(() => toast.remove(), 3000);
+        }
+
         function formatDate(isoDate) {
             return new Date(isoDate).toLocaleDateString('pt-BR');
         }
 
-        // Formatar tempo relativo
         function formatRelativeTime(isoDate) {
             const now = new Date();
             const date = new Date(isoDate);
             const diff = Math.floor((now - date) / 1000);
 
-            if (diff < 60) return `${diff}s atrás`;
-            if (diff < 3600) return `${Math.floor(diff / 60)}min atrás`;
-            if (diff < 86400) return `${Math.floor(diff / 3600)}h atrás`;
-            return `${Math.floor(diff / 86400)}d atrás`;
+            if (diff < 60) return `${diff}s ago`;
+            if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+            if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+            return `${Math.floor(diff / 86400)}d ago`;
         }
 
-        // Inicializar
+        // Initialize
         loadData();
-        setInterval(loadStats, 5000); // Atualizar stats a cada 5 segundos
+        setInterval(loadStats, 5000);
     </script>
 </body>
 </html>
