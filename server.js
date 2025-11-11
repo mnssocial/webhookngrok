@@ -12,9 +12,9 @@ let eventIdCounter = 1;
 
 // Middleware
 app.use(cors());
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.raw({ type: '*/*', limit: '10mb' }));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.text({ type: '*/*' }));
 
 // Servir arquivos estáticos
 app.use(express.static('public'));
@@ -34,7 +34,7 @@ app.all('/webhook', (req, res) => {
     headers: req.headers,
     query: req.query,
     body: req.body,
-    rawBody: req.body.toString ? req.body.toString() : req.body,
+    rawBody: typeof req.body === 'string' ? req.body : JSON.stringify(req.body),
     ip: req.ip || req.connection.remoteAddress
   };
 
@@ -64,7 +64,7 @@ app.all('/webhook/*', (req, res) => {
     headers: req.headers,
     query: req.query,
     body: req.body,
-    rawBody: req.body.toString ? req.body.toString() : req.body,
+    rawBody: typeof req.body === 'string' ? req.body : JSON.stringify(req.body),
     ip: req.ip || req.connection.remoteAddress
   };
 
